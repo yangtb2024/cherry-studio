@@ -1,65 +1,81 @@
-import type { ExtractChunkData } from '@llm-tools/embedjs-interfaces'
+import { WarningOutlined } from '@ant-design/icons'
 import { TopView } from '@renderer/components/TopView'
-import { DEFAULT_KNOWLEDGE_THRESHOLD } from '@renderer/config/constant'
-import { getFileFromUrl, getKnowledgeBaseParams } from '@renderer/services/KnowledgeService'
-import { FileType, KnowledgeBase } from '@renderer/types'
-import { Input, List, Modal, Spin, Typography } from 'antd'
-import { useState } from 'react'
+import { DEFAULT_KNOWLEDGE_DOCUMENT_COUNT } from '@renderer/config/constant'
+import { getEmbeddingMaxContext } from '@renderer/config/embedings'
+import { isEmbeddingModel } from '@renderer/config/models'
+import { useKnowledge } from '@renderer/hooks/useKnowledge'
+import { useProviders } from '@renderer/hooks/useProvider'
+import { getModelUniqId } from '@renderer/services/ModelService'
+import { KnowledgeBase } from '@renderer/types'
+import { Alert, Form, Input, InputNumber, Modal, Select, Slider } from 'antd'
+import { sortBy } from 'lodash'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import styled from 'styled-components'
-
-const { Search } = Input
-const { Text, Paragraph } = Typography
 
 interface ShowParams {
   base: KnowledgeBase
+}
+
+interface FormData {
+  name: string
+  model: string
+  documentCount?: number
+  chunkSize?: number
+  chunkOverlap?: number
+  threshold?: number
 }
 
 interface Props extends ShowParams {
   resolve: (data: any) => void
 }
 
-const PopupContainer: React.FC<Props> = ({ base, resolve }) => {
+const PopupContainer: React.FC<Props> = ({ base: _base, resolve }) => {
   const [open, setOpen] = useState(true)
-  const [loading, setLoading] = useState(false)
-  const [results, setResults] = useState<Array<ExtractChunkData & { file: FileType | null }>>([])
-  const [searchKeyword, setSearchKeyword] = useState('')
+  const [form] = Form.useForm<FormData>()
   const { t } = useTranslation()
+  const { providers } = useProviders()
+  const { base, updateKnowledgeBase } = useKnowledge(_base.id)
 
-  const handleSearch = async (value: string) => {
-    if (!value.trim()) {
-      setResults([])
-      setSearchKeyword('')
-      return
-    }
+  useEffect(() => {
+    form.setFieldsValue({ documentCount: base?.documentCount || 6 })
+  }, [base, form])
 
-    setSearchKeyword(value.trim())
-    setLoading(true)
-    try {
-      const searchResults = await window.api.knowledgeBase.search({
-        search: value,
-        base: getKnowledgeBaseParams(base)
-      })
-      const results = await Promise.all(
-        searchResults.map(async (item) => {
-          const file = await getFileFromUrl(item.metadata.source)
-          return { ...item, file }
-        })
-      )
-      const filteredResults = results.filter((item) => {
-        const threshold = base.threshold || DEFAULT_KNOWLEDGE_THRESHOLD
-        return item.score >= threshold
-      })
-      setResults(filteredResults)
-    } catch (error) {
-      console.error('Search failed:', error)
-    } finally {
-      setLoading(false)
-    }
+  if (!base) {
+    resolve(null)
+    return null
   }
 
-  const onOk = () => {
-    setOpen(false)
+  const selectOptions = providers
+    .filter((p) => p.models.length > 0)
+    .map((p) => ({
+      label: p.isSystem ? t(`provider.${p.id}`) : p.name,
+      title: p.name,
+      options: sortBy(p.models, 'name')
+        .filter((model) => isEmbeddingModel(model))
+        .map((m) => ({
+          label: m.name,
+          value: getModelUniqId(m)
+        }))
+    }))
+    .filter((group) => group.options.length > 0)
+
+  const onOk = async () => {
+    try {
+      const values = await form.validateFields()
+      const newBase = {
+        ...base,
+        name: values.name,
+        documentCount: values.documentCount || DEFAULT_KNOWLEDGE_DOCUMENT_COUNT,
+        chunkSize: values.chunkSize,
+        chunkOverlap: values.chunkOverlap,
+        threshold: values.threshold ?? undefined
+      }
+      updateKnowledgeBase(newBase)
+      setOpen(false)
+      resolve(newBase)
+    } catch (error) {
+      console.error('Validation failed:', error)
+    }
   }
 
   const onCancel = () => {
@@ -67,128 +83,131 @@ const PopupContainer: React.FC<Props> = ({ base, resolve }) => {
   }
 
   const onClose = () => {
-    resolve({})
+    resolve(null)
   }
 
-  KnowledgeSearchPopup.hide = onCancel
-
-  const highlightText = (text: string) => {
-    if (!searchKeyword) return text
-
-    // Escape special characters in the search keyword
-    const escapedKeyword = searchKeyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    const parts = text.split(new RegExp(`(${escapedKeyword})`, 'gi'))
-
-    return parts.map((part, i) =>
-      part.toLowerCase() === searchKeyword.toLowerCase() ? <mark key={i}>{part}</mark> : part
-    )
-  }
+  KnowledgeSettingsPopup.hide = onCancel
 
   return (
     <Modal
-      title={t('knowledge.search')}
+      title={t('knowledge.settings')}
       open={open}
       onOk={onOk}
       onCancel={onCancel}
       afterClose={onClose}
-      width={800}
-      footer={null}
+      destroyOnClose
+      maskClosable={false}
       centered
-      transitionName="ant-move-down">
-      <SearchContainer>
-        <Search
-          placeholder={t('knowledge.search_placeholder')}
-          allowClear
-          enterButton
-          size="large"
-          onSearch={handleSearch}
-        />
-        <ResultsContainer>
-          {loading ? (
-            <LoadingContainer>
-              <Spin size="large" />
-            </LoadingContainer>
-          ) : (
-            <List
-              dataSource={results}
-              renderItem={(item) => (
-                <List.Item>
-                  <ResultItem>
-                    <ScoreTag>Score: {(item.score * 100).toFixed(1)}%</ScoreTag>
-                    <Paragraph>{highlightText(item.pageContent)}</Paragraph>
-                    <MetadataContainer>
-                      <Text type="secondary">
-                        {t('knowledge.source')}:{' '}
-                        {item.file ? (
-                          <a href={`http://file/${item.file.name}`} target="_blank" rel="noreferrer">
-                            {item.file.origin_name}
-                          </a>
-                        ) : (
-                          item.metadata.source
-                        )}
-                      </Text>
-                    </MetadataContainer>
-                  </ResultItem>
-                </List.Item>
-              )}
-            />
-          )}
-        </ResultsContainer>
-      </SearchContainer>
+      width="80%"
+      bodyStyle={{ maxHeight: '70vh', overflowY: 'auto', paddingRight: '20px' }}>
+      <Form form={form} layout="vertical">
+        <Form.Item
+          name="name"
+          label={t('common.name')}
+          initialValue={base.name}
+          rules={[{ required: true, message: t('message.error.enter.name') }]}>
+          <Input placeholder={t('common.name')} />
+        </Form.Item>
+
+        <Form.Item
+          name="model"
+          label={t('models.embedding_model')}
+          initialValue={getModelUniqId(base.model)}
+          tooltip={{ title: t('models.embedding_model_tooltip'), placement: 'right' }}
+          rules={[{ required: true, message: t('message.error.enter.model') }]}>
+          <Select style={{ width: '100%' }} options={selectOptions} placeholder={t('settings.models.empty')} disabled />
+        </Form.Item>
+
+        <Form.Item
+          name="documentCount"
+          label={t('knowledge.document_count')}
+          tooltip={{ title: t('knowledge.document_count_help') }}>
+          <Slider
+            style={{ width: 'calc(100% - 20px)'}}
+            min={1}
+            max={30}
+            step={1}
+            marks={{ 1: '1', 6: t('knowledge.document_count_default'), 30: '30' }}
+          />
+        </Form.Item>
+
+        <Form.Item
+          name="chunkSize"
+          label={t('knowledge.chunk_size')}
+          tooltip={{ title: t('knowledge.chunk_size_tooltip') }}
+          initialValue={base.chunkSize}
+          rules={[
+            {
+              validator(_, value) {
+                const maxContext = getEmbeddingMaxContext(base.model.id)
+                if (value && maxContext && value > maxContext) {
+                  return Promise.reject(new Error(t('knowledge.chunk_size_too_large', { max_context: maxContext })))
+                }
+                return Promise.resolve()
+              }
+            }
+          ]}>
+          <InputNumber
+            style={{ width: '100%' }}
+            min={100}
+            defaultValue={base.chunkSize}
+            placeholder={t('knowledge.chunk_size_placeholder')}
+          />
+        </Form.Item>
+
+        <Form.Item
+          name="chunkOverlap"
+          label={t('knowledge.chunk_overlap')}
+          initialValue={base.chunkOverlap}
+          tooltip={{ title: t('knowledge.chunk_overlap_tooltip') }}
+          rules={[
+            ({ getFieldValue }) => ({
+              validator(_， value) {
+                if (!value || getFieldValue('chunkSize') > value) {
+                  return Promise.resolve()
+                }
+                return Promise.reject(new 错误(t('message.error.chunk_overlap_too_large')))
+              }
+            })
+          ]}
+          dependencies={['chunkSize']}>
+          <InputNumber
+            style={{ width: '100%' }}
+            min={0}
+            defaultValue={base.chunkOverlap}
+            placeholder={t('knowledge.chunk_overlap_placeholder')}
+          />
+        </Form.Item>
+        <Form.Item
+          name="threshold"
+          label={t('knowledge.threshold')}
+          tooltip={{ title: t('knowledge.threshold_tooltip') }}
+          initialValue={base.threshold}
+          rules={[
+            {
+              validator(_， value) {
+                if (value && (value > 1 || value < 0)) {
+                  return Promise.reject(new 错误(t('knowledge.threshold_too_large_or_small')))
+                }
+                return Promise.resolve()
+              }
+            }
+          ]}>
+          <InputNumber placeholder={t('knowledge.threshold_placeholder')} step={0.1} style={{ width: '100%' }} />
+        </Form.Item>
+      </Form>
+      <Alert message={t('knowledge.chunk_size_change_warning')} type="warning" showIcon icon={<WarningOutlined />} />
     </Modal>
   )
 }
 
-const SearchContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-`
+const TopViewKey = 'KnowledgeSettingsPopup'
 
-const ResultsContainer = styled.div`
-  max-height: 60vh;
-  overflow-y: auto;
-`
-
-const LoadingContainer = styled.div`
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 200px;
-`
-
-const ResultItem = styled.div`
-  width: 100%;
-  position: relative;
-  padding: 16px;
-  background: var(--color-background-soft);
-  border-radius: 8px;
-`
-
-const ScoreTag = styled.div`
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  padding: 2px 8px;
-  background: var(--color-primary);
-  color: white;
-  border-radius: 4px;
-  font-size: 12px;
-`
-
-const MetadataContainer = styled.div`
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid var(--color-border);
-`
-
-const TopViewKey = 'KnowledgeSearchPopup'
-
-export default class KnowledgeSearchPopup {
-  static topviewId = 0
+export 默认 class KnowledgeSettingsPopup {
   static hide() {
     TopView.hide(TopViewKey)
   }
+
   static show(props: ShowParams) {
     return new Promise<any>((resolve) => {
       TopView.show(
@@ -198,7 +217,7 @@ export default class KnowledgeSearchPopup {
             resolve(v)
             TopView.hide(TopViewKey)
           }}
-        />,
+        />，
         TopViewKey
       )
     })
