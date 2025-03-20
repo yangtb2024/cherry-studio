@@ -271,11 +271,13 @@ const RangeContainer = styled.div`
   align-items: center;
   justify-content: space-between;
   margin-bottom: 10px;
+  padding-right: 15px;
 `
 
 const RecalculateButton = styled(Button)`
   display: flex;
   align-items: center;
+  margin-left: 20px;
 `
 
 const LoadingContainer = styled.div`
