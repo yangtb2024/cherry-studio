@@ -200,11 +200,13 @@
       "assistant": "智能体",
       "avatar": "头像",
       "back": "返回",
+      "by_model": "按模型",
       "cancel": "取消",
       "chat": "聊天",
       "clear": "清除",
       "close": "关闭",
       "copy": "复制",
+      "count": "数量",
       "cut": "剪切",
       "default": "默认",
       "delete": "删除",
@@ -218,6 +220,8 @@
       "fullscreen": "已进入全屏模式，按 F11 退出",
       "knowledge_base": "知识库",
       "language": "语言",
+      "messages": " 条消息",
+      "minute": " 分钟",
       "model": "模型",
       "models": "模型",
       "name": "名称",
@@ -231,6 +235,7 @@
       "search": "搜索",
       "select": "选择",
       "topics": "话题",
+      "usage": "使用量",
       "warning": "警告",
       "you": "用户",
       "more": "更多"
@@ -1084,6 +1089,95 @@
       "show_mini_window": "快捷助手",
       "show_window": "显示窗口"
     },
+    "statistics": {
+      "title": "统计数据",
+      "overview": "概览",
+      "usage": "使用情况",
+      "models": "模型统计",
+      "time_title": "时间趋势",
+      "content_title": "内容分析",
+      "resources_title": "资源使用",
+      
+      "total_sessions": "总会话数",
+      "total_messages": "总消息数",
+      "user_messages": "用户消息",
+      "assistant_messages": "助手回复",
+      "avg_session_length": "平均会话长度",
+      "total_usage_time": "总使用时长",
+      "active_users": "活跃用户",
+      
+      "model_usage": "模型使用频率",
+      "model_response_time": "响应时间",
+      "model_response_length": "回复长度",
+      "model_error_rate": "错误率",
+      
+      "time_range": {
+        "today": "今日",
+        "week": "本周",
+        "month": "本月",
+        "year": "本年",
+        "all": "全部",
+        "custom": "自定义"
+      },
+      
+      "trend": {
+        "daily": "日趋势",
+        "weekly": "周趋势",
+        "monthly": "月趋势"
+      },
+      
+      "time": {
+        "peak_usage_time": "高峰使用时段",
+        "weekdays": {
+          "0": "周日",
+          "1": "周一", 
+          "2": "周二", 
+          "3": "周三", 
+          "4": "周四", 
+          "5": "周五", 
+          "6": "周六"
+        },
+        "months": {
+          "1": "一月",
+          "2": "二月",
+          "3": "三月",
+          "4": "四月",
+          "5": "五月",
+          "6": "六月",
+          "7": "七月",
+          "8": "八月",
+          "9": "九月",
+          "10": "十月",
+          "11": "十一月",
+          "12": "十二月"
+        }
+      },
+      
+      "recalculate": "重新计算统计数据",
+      "recalculate_tooltip": "重新计算所有统计数据，耗时操作",
+      "recalculating": "正在重新计算...",
+      "recalculate_success": "统计数据已重新计算",
+      "recalculate_error": "重新计算统计数据失败",
+      
+      "content": {
+        "topics": "热门话题",
+        "keywords": "关键词",
+        "session_length": "会话长度分布"
+      },
+      
+      "resources": {
+        "api_calls": "API调用",
+        "token_usage": "Token使用量",
+        "knowledge_base": "知识库使用"
+      },
+      
+      "no_data": "暂无数据",
+      "loading": "正在加载数据...",
+      "last_updated": "最后更新: {{time}}",
+      "fetch_error": "获取统计数据失败",
+      "fetch_custom_range_error": "获取自定义日期范围统计数据失败"
+    },
+    
     "words": {
       "knowledgeGraph": "知识图谱",
       "quit": "退出",

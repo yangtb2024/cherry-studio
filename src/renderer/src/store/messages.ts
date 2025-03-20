@@ -256,7 +256,14 @@ const syncMessagesWithDB = async (topicId: string, messages: Message[]) => {
   if (topic) {
     await db.topics.update(topicId, { messages })
   } else {
-    await db.topics.add({ id: topicId, messages })
+    const now = new Date().toISOString()
+    await db.topics.add({ 
+      id: topicId, 
+      messages,
+      name: '新会话',
+      createdAt: now,
+      updatedAt: now
+    })
   }
 }
 

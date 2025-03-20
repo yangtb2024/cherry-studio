@@ -315,7 +315,14 @@ const Inputbar: FC<Props> = ({ assistant: _assistant, setActiveTopic, topic }) =
 
     const topic = getDefaultTopic(assistant.id)
 
-    await db.topics.add({ id: topic.id, messages: [] })
+    const now = new Date().toISOString()
+    await db.topics.add({ 
+      id: topic.id, 
+      messages: [], 
+      name: '新会话',
+      createdAt: now,
+      updatedAt: now 
+    })
     await addAssistantMessagesToTopic({ assistant, topic })
 
     // Reset to assistant default model

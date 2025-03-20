@@ -1,14 +1,15 @@
-import { FileType, KnowledgeItem, Topic, TranslateHistory } from '@renderer/types'
+import { FileType, KnowledgeItem, StatisticsData, Topic, TranslateHistory } from '@renderer/types'
 import { Dexie, type EntityTable } from 'dexie'
 
-import { upgradeToV5 } from './upgrades'
+import { upgradeToV5, upgradeToV6 } from './upgrades'
 // Database declaration (move this to its own module also)
 export const db = new Dexie('CherryStudio') as Dexie & {
   files: EntityTable<FileType, 'id'>
-  topics: EntityTable<Pick<Topic, 'id' | 'messages'>, 'id'>
+  topics: EntityTable<Pick<Topic, 'id' | 'messages' | 'name' | 'createdAt' | 'updatedAt'>, 'id'>
   settings: EntityTable<{ id: string; value: any }, 'id'>
   knowledge_notes: EntityTable<KnowledgeItem, 'id'>
   translate_history: EntityTable<TranslateHistory, 'id'>
+  statistics: EntityTable<StatisticsData, 'id'>
 }
 
 db.version(1).stores({
@@ -45,5 +46,16 @@ db.version(5)
     translate_history: '&id, sourceText, targetText, sourceLanguage, targetLanguage, createdAt'
   })
   .upgrade((tx) => upgradeToV5(tx))
+
+db.version(6)
+  .stores({
+    files: 'id, name, origin_name, path, size, ext, type, created_at, count',
+    topics: '&id, messages, createdAt, updatedAt',
+    settings: '&id, value',
+    knowledge_notes: '&id, baseId, type, content, created_at, updated_at',
+    translate_history: '&id, sourceText, targetText, sourceLanguage, targetLanguage, createdAt',
+    statistics: '&id, date, type, data'
+  })
+  .upgrade((tx) => upgradeToV6(tx))
 
 export default db

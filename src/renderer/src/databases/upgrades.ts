@@ -51,4 +51,38 @@ export async function upgradeToV6(tx: Transaction): Promise<void> {
       })
     }
   }
+  
+  // 创建统计表基础数据
+  try {
+    // 初始化一个基础的统计记录
+    await tx.table('statistics').add({
+      id: 'daily',
+      date: new Date().toISOString().split('T')[0],
+      type: 'daily',
+      data: {}
+    })
+    
+    await tx.table('statistics').add({
+      id: 'weekly',
+      date: new Date().toISOString().split('T')[0],
+      type: 'weekly',
+      data: {}
+    })
+    
+    await tx.table('statistics').add({
+      id: 'monthly',
+      date: new Date().toISOString().split('T')[0],
+      type: 'monthly',
+      data: {}
+    })
+    
+    await tx.table('statistics').add({
+      id: 'all_time',
+      date: new Date().toISOString().split('T')[0],
+      type: 'all_time',
+      data: {}
+    })
+  } catch (error) {
+    console.error('初始化统计表失败', error)
+  }
 }
