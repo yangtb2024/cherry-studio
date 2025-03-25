@@ -101,6 +101,30 @@ const DisplaySettings: FC = () => {
     [t]
   )
 
+  const topicPositionOptions = useMemo(
+    () => [
+      {
+        value: 'left' as 'left',
+        label: (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', gap: '5px' }}>
+            <i className="iconfont icon-alignleft" />
+            <span>{t('settings.topic.position.left')}</span>
+          </div>
+        )
+      },
+      {
+        value: 'right' as 'right',
+        label: (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', gap: '5px' }}>
+            <i className="iconfont icon-alignright" />
+            <span>{t('settings.topic.position.right')}</span>
+          </div>
+        )
+      }
+    ],
+    [t]
+  )
+
   return (
     <SettingContainer theme={themeMode}>
       <SettingGroup theme={theme}>
@@ -125,15 +149,7 @@ const DisplaySettings: FC = () => {
         <SettingDivider />
         <SettingRow>
           <SettingRowTitle>{t('settings.topic.position')}</SettingRowTitle>
-          <Segmented
-            value={topicPosition || 'right'}
-            shape="round"
-            onChange={setTopicPosition}
-            options={[
-              { value: 'left', label: t('settings.topic.position.left') },
-              { value: 'right', label: t('settings.topic.position.right') }
-            ]}
-          />
+          <Segmented value={topicPosition || 'right'} onChange={setTopicPosition} options={topicPositionOptions} />
         </SettingRow>
         <SettingDivider />
         {topicPosition === 'left' && (
